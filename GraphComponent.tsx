@@ -9,42 +9,53 @@ interface Props {
 }
 
 const GraphComponent: React.FC<Props> = ({ adjustedPredictions, allYearsData, predictionTimestamps }) => {
-  // The starting index for the adjusted predictions
-  const startIndexOfPredictions = allYearsData.length - adjustedPredictions.length;
+  // Extract yields and generate labels for all year data
+  const allYearsYields = new Array(allYearsData.length).fill(null);
+  const labels = new Array(allYearsData.length).fill('');
 
-  // Create labels for the x-axis with a label for every fourth index
-  const labels = allYearsData.map((_, idx) => ((idx % 4 === 0) ? (idx + 1).toString() : ''));
+  allYearsData.forEach((data, idx) => {
+    allYearsYields[idx] = data.yield;
+    // Display labels every fourth index starting from the first index
+    if (idx % 4 === 0) {
+      labels[idx] = data.index.toString();
+    }
+  });
 
-  // Extract just the yield values from all years data
-  const allYearsYields = allYearsData.map(data => data.yield);
-
-  // Padding the start of the predictions array with null values so they start at the correct index on the graph
-  const predictionsWithPadding = new Array(startIndexOfPredictions).fill(null).concat(adjustedPredictions);
+  // Initialize prediction array with null to fill the graph up to the first prediction point
+  const predictionYields = new Array(allYearsData.length).fill(null);
+  // Map predictions to their respective timestamps in the graph data
+  adjustedPredictions.forEach((prediction, idx) => {
+    const timestampIndex = predictionTimestamps[idx] - 1;  // Convert 1-based index to 0-based
+    predictionYields[timestampIndex] = prediction;
+    // Set label for prediction points every fourth index
+    if (timestampIndex % 4 === 0) {
+      labels[timestampIndex] = predictionTimestamps[idx].toString();
+    }
+  });
 
   const chartData = {
     labels: labels,
     datasets: [
       {
         data: allYearsYields,
-        color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`, // Color for all years data, e.g., blue
+        color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`, // blue for historical data
       },
       {
-        data: predictionsWithPadding,
-        color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`, // Color for adjusted predictions, e.g., red
+        data: predictionYields,
+        color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`, // red for predictions
       }
     ],
   };
 
-  // Use the full width of the device and a fixed height for the chart
   return (
     <View style={{ flex: 1 }}>
       <LineChart
         data={chartData}
         width={Dimensions.get('window').width}
-        height={350}
-        yAxisLabel=""
-        yAxisSuffix=""
-        yAxisInterval={1} // Interval for Y-axis labels
+        height={220}
+        yAxisLabel="Yield"
+        yAxisSuffix="k"
+        yAxisInterval={1}
         chartConfig={{
           backgroundColor: '#ffffff',
           backgroundGradientFrom: '#ffffff',
